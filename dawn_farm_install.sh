@@ -6,6 +6,15 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# Kiểm tra xem python3.12-venv đã cài đặt chưa
+if ! dpkg -l | grep -q "python3.12-venv"; then
+    echo "python3.12-venv is not installed. Installing it now..."
+    apt update
+    apt install -y python3.12-venv
+else
+    echo "python3.12-venv is already installed."
+fi
+
 # Đường dẫn thư mục cài đặt
 INSTALL_DIR="/home/nodeerse/Desktop/"
 
