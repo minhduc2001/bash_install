@@ -36,32 +36,30 @@ echo "Activating virtual environment and installing requirements..."
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Bước 6: Tạo các file cấu hình với nội dung mẫu
-CONFIG_FILES=("config/data/farm.txt" "config/data/proxies.txt")
+# Bước 6: Sao chép các file cấu hình từ Desktop vào thư mục config/data
+CONFIG_FILES=("farm.txt" "proxies.txt")
+SOURCE_DIR="/home/nodeerse/Desktop/"
 
 for FILE in "${CONFIG_FILES[@]}"; do
-    echo "Creating $FILE with default content..."
-    mkdir -p "$(dirname "$FILE")"
-    if [ ! -f "$FILE" ]; then
-        echo "# Enter your content here" > "$FILE"
+    echo "Copying $FILE from $SOURCE_DIR to $INSTALL_DIR$CLONE_DIR/config/data/..."
+    
+    if [ ! -f "$SOURCE_DIR$FILE" ]; then
+        echo "Error: $SOURCE_DIR$FILE does not exist. Please make sure the file is on the Desktop."
+        exit 1
     fi
+
+    # Tạo thư mục đích nếu chưa có
+    mkdir -p "$(dirname "$INSTALL_DIR$CLONE_DIR/config/data/$FILE")"
+    
+    # Sao chép file vào thư mục đích
+    cp "$SOURCE_DIR$FILE" "$INSTALL_DIR$CLONE_DIR/config/data/$FILE"
 done
 
-# Thông báo cho người dùng chỉnh sửa file
-echo -e "\nConfiguration files have been created. Please edit the following files:"
-for FILE in "${CONFIG_FILES[@]}"; do
-    echo "  - $FILE"
-done
-
-echo -e "\nTo edit the files, you can use the following commands:"
-for FILE in "${CONFIG_FILES[@]}"; do
-    echo "  nano $INSTALL_DIR$CLONE_DIR/$FILE"
-done
-
-# Dừng script để người dùng chỉnh sửa file
-echo -e "\nPress Enter after editing the configuration files to continue..."
+# Thông báo cho người dùng về việc sao chép file
+echo -e "\nConfiguration files have been copied successfully."
+echo -e "\nTo continue, press Enter..."
 read -p "Press Enter to continue..."
 
-# Bước 7: Chạy script Python sau khi người dùng chỉnh sửa xong
+# Bước 7: Chạy script Python
 echo "Running farm.py..."
 python3 farm.py
