@@ -36,10 +36,19 @@ echo "Activating virtual environment and installing requirements..."
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Bước 6: Mở các file config
-echo "Opening configuration files for editing..."
-nano config/data/farm.txt
-nano config/data/proxies.txt
+# Bước 6: Mở các file để nhập nội dung mới
+CONFIG_FILES=("config/data/farm.txt" "config/data/proxies.txt")
+
+for FILE in "${CONFIG_FILES[@]}"; do
+    echo "Preparing to edit $FILE..."
+    
+    # Tạo file nếu chưa tồn tại
+    mkdir -p "$(dirname "$FILE")"
+    echo "# Enter content for $FILE below:" > "$FILE"
+    
+    # Mở file với nano để người dùng nhập nội dung
+    nano "$FILE"
+done
 
 # Bước 7: Chạy script Python
 echo "Running farm.py..."
