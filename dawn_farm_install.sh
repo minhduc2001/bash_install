@@ -36,34 +36,30 @@ echo "Activating virtual environment and installing requirements..."
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Bước 6: Mở các file để nhập nội dung mới
+# Bước 6: Tạo các file cấu hình với nội dung mẫu
 CONFIG_FILES=("config/data/farm.txt" "config/data/proxies.txt")
 
 for FILE in "${CONFIG_FILES[@]}"; do
-    echo "Preparing to edit $FILE..."
-    
-    # Tạo file nếu chưa tồn tại
+    echo "Creating $FILE with default content..."
     mkdir -p "$(dirname "$FILE")"
     if [ ! -f "$FILE" ]; then
-        echo "# Enter content for $FILE below:" > "$FILE"
-    fi
-
-    # Kiểm tra xem script có chạy trong môi trường không tương tác
-    if [ -t 0 ]; then
-        # Mở file bằng nano nếu có terminal
-        nano "$FILE"
-    else
-        # Sử dụng read để yêu cầu người dùng nhập nội dung nếu không có terminal
-        echo "Script is running in a non-interactive shell. Please input content for $FILE:"
-        read -p "Content: " CONTENT
-        echo "$CONTENT" > "$FILE"
-    fi
-
-    # Kiểm tra nếu file rỗng sau khi chỉnh sửa
-    if [ ! -s "$FILE" ]; then
-        echo "Warning: $FILE is empty. Please edit it again if necessary."
+        echo "# Enter your content here" > "$FILE"
     fi
 done
+
+# Thông báo cho người dùng chỉnh sửa file
+echo -e "\nConfiguration files have been created. Please edit the following files:"
+for FILE in "${CONFIG_FILES[@]}"; do
+    echo "  - $FILE"
+done
+
+echo -e "\nTo edit the files, you can use the following commands:"
+for FILE in "${CONFIG_FILES[@]}"; do
+    echo "  nano $INSTALL_DIR$CLONE_DIR/$FILE"
+done
+
+# Dừng script để người dùng chỉnh sửa file
+read -p "Press Enter after editing the configuration files to continue..."
 
 # Bước 7: Chạy script Python
 echo "Running farm.py..."
