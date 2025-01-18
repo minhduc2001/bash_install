@@ -62,4 +62,4 @@ read -p "Press Enter to continue..."
 
 # Bước 7: Chạy script Python
 echo "Running farm.py..."
-python3 farm.py
+python3 farm.py | tee /dev/tty | grep "SUCCESS" >> /home/nodeerse/Desktop/success_log.txt
