@@ -48,10 +48,18 @@ for FILE in "${CONFIG_FILES[@]}"; do
         echo "# Enter content for $FILE below:" > "$FILE"
     fi
 
-    # Mở file với nano để người dùng nhập nội dung
-    nano "$FILE"
+    # Kiểm tra xem script có chạy trong môi trường không tương tác
+    if [ -t 0 ]; then
+        # Mở file bằng nano nếu có terminal
+        nano "$FILE"
+    else
+        # Sử dụng read để yêu cầu người dùng nhập nội dung nếu không có terminal
+        echo "Script is running in a non-interactive shell. Please input content for $FILE:"
+        read -p "Content: " CONTENT
+        echo "$CONTENT" > "$FILE"
+    fi
 
-    # Kiểm tra nếu người dùng thoát nano mà không nhập nội dung
+    # Kiểm tra nếu file rỗng sau khi chỉnh sửa
     if [ ! -s "$FILE" ]; then
         echo "Warning: $FILE is empty. Please edit it again if necessary."
     fi
