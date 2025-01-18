@@ -44,10 +44,17 @@ for FILE in "${CONFIG_FILES[@]}"; do
     
     # Tạo file nếu chưa tồn tại
     mkdir -p "$(dirname "$FILE")"
-    echo "# Enter content for $FILE below:" > "$FILE"
-    
+    if [ ! -f "$FILE" ]; then
+        echo "# Enter content for $FILE below:" > "$FILE"
+    fi
+
     # Mở file với nano để người dùng nhập nội dung
     nano "$FILE"
+
+    # Kiểm tra nếu người dùng thoát nano mà không nhập nội dung
+    if [ ! -s "$FILE" ]; then
+        echo "Warning: $FILE is empty. Please edit it again if necessary."
+    fi
 done
 
 # Bước 7: Chạy script Python
