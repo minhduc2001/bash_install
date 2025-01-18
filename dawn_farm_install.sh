@@ -59,8 +59,9 @@ for FILE in "${CONFIG_FILES[@]}"; do
 done
 
 # Dừng script để người dùng chỉnh sửa file
-read -p "Press Enter after editing the configuration files to continue..."
+echo -e "\nPress Enter after editing the configuration files to continue..."
+read -p "Press Enter to continue..."
 
-# Bước 7: Chạy script Python
+# Bước 7: Chạy script Python sau khi người dùng chỉnh sửa xong
 echo "Running farm.py..."
 python3 farm.py
