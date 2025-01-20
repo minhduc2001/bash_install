@@ -8,12 +8,17 @@ file="test.txt"
 
 echo "Nhập nội dung cho file $file (nhập 'DONE' để kết thúc):"
 
-while :; do
+while true; do
     read -r line
-    # Xóa khoảng trắng thừa và kiểm tra nếu người dùng nhập "DONE"
-    if [[ "${line//[[:space:]]/}" == "DONE" ]]; then
+    # Xóa khoảng trắng thừa đầu và cuối dòng nhập
+    line=$(echo "$line" | xargs)
+    
+    # Kiểm tra nếu dòng nhập là "DONE"
+    if [ "$line" == "DONE" ]; then
         break
     fi
+    
+    # Ghi vào file
     echo "$line" >> "$file"
 done
 
