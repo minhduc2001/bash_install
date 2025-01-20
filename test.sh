@@ -13,6 +13,6 @@ fi
 # Chuyển đến thư mục Desktop
 cd /home/nodeerse/Desktop || exit
 
-echo ./test.txt | xargs -o vim
+echo "./test.txt" | xargs -o vim
 
 echo "Đã mở các file trong trình soạn thảo. Nhập xong thì quay lại script này."
