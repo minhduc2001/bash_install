@@ -10,11 +10,11 @@ echo "Nhập nội dung cho file $file (nhập 'DONE' để kết thúc):"
 
 while true; do
     read -r line
-    # Xóa khoảng trắng thừa đầu và cuối dòng nhập
+    # Loại bỏ khoảng trắng thừa đầu và cuối dòng nhập
     line=$(echo "$line" | xargs)
     
-    # Kiểm tra nếu dòng nhập là "DONE"
-    if [ "$line" == "DONE" ]; then
+    # Kiểm tra nếu dòng nhập chứa từ "DONE"
+    if [[ "$line" == *DONE* ]]; then
         break
     fi
     
