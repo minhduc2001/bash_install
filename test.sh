@@ -10,7 +10,8 @@ echo "Nhập nội dung cho file $file (nhập 'DONE' để kết thúc):"
 
 while :; do
     read -r line
-    if [ "$line" = "DONE" ]; then
+    # Xóa khoảng trắng thừa và kiểm tra nếu người dùng nhập "DONE"
+    if [[ "${line//[[:space:]]/}" == "DONE" ]]; then
         break
     fi
     echo "$line" >> "$file"
