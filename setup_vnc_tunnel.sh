@@ -61,7 +61,7 @@ LOCAL_USER=$(whoami)
 # Cập nhật hệ thống và cài đặt các gói cần thiết
 echo "Cập nhật hệ thống và cài đặt các gói cần thiết..."
 sudo apt-get update
-sudo apt install -y xfce4 xfce4-goodies tightvncserver autossh openssh-client sshpass
+sudo apt install -y xfce4 xfce4-goodies tightvncserver autossh openssh-client sshpass netcat-openbsd
 check_status "Cài đặt các gói thất bại"
 
 # Bước 1: Tạo SSH key
@@ -74,10 +74,19 @@ else
     echo "Khóa SSH đã được tạo tại ~/.ssh/id_rsa và ~/.ssh/id_rsa.pub"
 fi
 
+# Kiểm tra kết nối đến tunnel server trước khi sao chép khóa
+echo "Kiểm tra kết nối đến tunnel server..."
+nc -zv $TUNNEL_IP $TUNNEL_SSH_PORT 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "Lỗi: Không thể kết nối đến $TUNNEL_IP trên cổng $TUNNEL_SSH_PORT."
+    echo "Vui lòng kiểm tra firewall, security group, hoặc trạng thái server."
+    exit 1
+fi
+
 # Bước 2: Sao chép khóa công khai vào tunnel server
 echo "Bước 2: Sao chép khóa công khai vào tunnel server..."
-sshpass -p "$TUNNEL_PASSWORD" ssh -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub
-check_status "Sao chép khóa công khai thất bại (có thể mật khẩu không đúng hoặc server không phản hồi)"
+sshpass -p "$TUNNEL_PASSWORD" ssh -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub 2> /tmp/sshpass_error.log
+check_status "Sao chép khóa công khai thất bại. Kiểm tra mật khẩu hoặc cấu hình SSH trên tunnel server. Chi tiết lỗi: $(cat /tmp/sshpass_error.log)"
 
 # Kiểm tra kết nối không cần mật khẩu
 echo "Kiểm tra kết nối SSH không cần mật khẩu..."
