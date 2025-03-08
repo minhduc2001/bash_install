@@ -57,7 +57,7 @@ nc -zv $TUNNEL_IP $TUNNEL_SSH_PORT 2>/dev/null || check_status "Không thể k�
 
 # Sao chép SSH key lên tunnel server
 echo "Sao chép khóa công khai lên tunnel server..."
-sshpass -p "$TUNNEL_PASSWORD" ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub || check_status "Sao chép khóa SSH thất bại"
+SSHPASS='$TUNNEL_PASSWORD' sshpass -e ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub || check_status "Sao chép khóa SSH thất bại"
 
 # Kiểm tra kết nối không mật khẩu
 ssh -o BatchMode=yes -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "echo 'Kết nối thành công'" 2>/dev/null || check_status "Kết nối SSH không mật khẩu thất bại"
