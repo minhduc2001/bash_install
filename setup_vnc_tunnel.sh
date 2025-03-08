@@ -36,7 +36,7 @@ TUNNEL_NOVNC_PORT=${TUNNEL_NOVNC_PORT:-7013}
 # Thiết lập giá trị mặc định
 LOCAL_NOVNC_PORT=6080
 LOCAL_VNC_PORT=5901
-EMAIL="user@example.com"
+EMAIL="sale01@nodeverse.ai"
 VNC_PASSWORD="Vnc@2025"
 VNC_VIEWONLY_PASSWORD="Node123@"
 LOCAL_USER=$(whoami)
