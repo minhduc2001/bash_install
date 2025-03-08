@@ -8,7 +8,7 @@ check_status() {
     fi
 }
 
-# Hàm yêu cầu người dùng nhập thông tin
+# Hàm yêu cầu người dùng nhập thông tin (giữ lại cho các phần khác)
 prompt_input() {
     local prompt="$1"
     local var_name="$2"
@@ -21,8 +21,8 @@ prompt_input() {
     fi
 }
 
-# Yêu cầu người dùng nhập thông tin cấu hình
-echo "Nhập thông tin cấu hình (nhấn Enter để sử dụng giá trị mặc định nếu có):"
+# Yêu cầu người dùng nhập thông tin cấu hình cho tunnel server
+echo "Nhập thông tin cấu hình cho tunnel server (nhấn Enter để sử dụng giá trị mặc định nếu có):"
 prompt_input "Tên người dùng trên tunnel server (mặc định: ubuntu): " TUNNEL_USER
 TUNNEL_USER=${TUNNEL_USER:-ubuntu}
 prompt_input "Địa chỉ IP của tunnel server: " TUNNEL_IP
@@ -31,29 +31,13 @@ TUNNEL_SSH_PORT=${TUNNEL_SSH_PORT:-24700}
 prompt_input "Mật khẩu SSH của tunnel server: " TUNNEL_PASSWORD hidden
 prompt_input "Cổng NoVNC trên tunnel server (ví dụ: 7013, đảm bảo cổng này chưa được dùng): " TUNNEL_NOVNC_PORT
 TUNNEL_NOVNC_PORT=${TUNNEL_NOVNC_PORT:-7013}
-prompt_input "Cổng NoVNC trên máy local (mặc định: 6080): " LOCAL_NOVNC_PORT
-LOCAL_NOVNC_PORT=${LOCAL_NOVNC_PORT:-6080}
-prompt_input "Cổng VNC trên máy local (mặc định: 5901): " LOCAL_VNC_PORT
-LOCAL_VNC_PORT=${LOCAL_VNC_PORT:-5901}
-prompt_input "Email cho SSH key (mặc định: sale01@nodeverse.ai): " EMAIL
-EMAIL=${EMAIL:-sale01@nodeverse.ai}
-prompt_input "Mật khẩu VNC: " VNC_PASSWORD hidden
-prompt_input "Xác nhận mật khẩu VNC: " VNC_PASSWORD_CONFIRM hidden
-if [ "$VNC_PASSWORD" != "$VNC_PASSWORD_CONFIRM" ]; then
-    echo "Mật khẩu VNC không khớp!"
-    exit 1
-fi
-prompt_input "Bạn có muốn thiết lập mật khẩu view-only không? (y/n): " answer
-if [ "$answer" == "y" ]; then
-    prompt_input "Mật khẩu view-only: " VNC_VIEWONLY_PASSWORD hidden
-    prompt_input "Xác nhận mật khẩu view-only: " VNC_VIEWONLY_PASSWORD_CONFIRM hidden
-    if [ "$VNC_VIEWONLY_PASSWORD" != "$VNC_VIEWONLY_PASSWORD_CONFIRM" ]; then
-        echo "Mật khẩu view-only không khớp!"
-        exit 1
-    fi
-else
-    VNC_VIEWONLY_PASSWORD=""
-fi
+
+# Đặt giá trị mặc định cố định cho các thông số local và VNC
+LOCAL_NOVNC_PORT=6080
+LOCAL_VNC_PORT=5901
+EMAIL="user@example.com"
+VNC_PASSWORD="Vnc@2025"
+VNC_VIEWONLY_PASSWORD="Node123@"
 
 # Lấy tên người dùng hiện tại trên máy local
 LOCAL_USER=$(whoami)
@@ -61,7 +45,7 @@ LOCAL_USER=$(whoami)
 # Cập nhật hệ thống và cài đặt các gói cần thiết
 echo "Cập nhật hệ thống và cài đặt các gói cần thiết..."
 sudo apt-get update
-sudo apt install -y xfce4 xfce4-goodies tightvncserver autossh openssh-client sshpass netcat-openbsd
+sudo apt install -y xfce4 xfce4-goodies tightvncserver autossh openssh-client sshpass netcat-openbsd xfonts-base xfonts-75dpi xfonts-100dpi xfonts-scalable
 check_status "Cài đặt các gói thất bại"
 
 # Bước 1: Tạo SSH key
@@ -118,18 +102,14 @@ chmod +x ~/.vnc/xstartup
 check_status "Tạo file xstartup thất bại"
 
 # Thiết lập mật khẩu VNC
-echo "Thiết lập mật khẩu VNC..."
-if [ -n "$VNC_VIEWONLY_PASSWORD" ]; then
-    echo -e "$VNC_PASSWORD\n$VNC_PASSWORD\ny\n$VNC_VIEWONLY_PASSWORD\n$VNC_VIEWONLY_PASSWORD" | vncpasswd
-else
-    echo -e "$VNC_PASSWORD\n$VNC_PASSWORD\nn" | vncpasswd
-fi
+echo "Thiết lập mật khẩu VNC với giá trị mặc định..."
+echo -e "$VNC_PASSWORD\n$VNC_PASSWORD\ny\n$VNC_VIEWONLY_PASSWORD\n$VNC_VIEWONLY_PASSWORD" | vncpasswd
 check_status "Thiết lập mật khẩu VNC thất bại"
 
 # Khởi động VNC server lần đầu
 echo "Khởi động VNC server lần đầu..."
-vncserver :1 -geometry 1920x768 -localhost no
-check_status "Khởi động VNC server thất bại"
+vncserver :1 -geometry 1920x768
+check_status "Khởi động VNC server thất bại. Kiểm tra log tại ~/.vnc/*.log"
 
 # Bước 4: Thiết lập tự động mở SSH tunnel khi khởi động lại máy
 echo "Bước 4: Thiết lập tự động mở SSH tunnel khi khởi động lại máy..."
@@ -161,7 +141,7 @@ check_status "Thiết lập dịch vụ SSH tunnel thất bại"
 
 # Bước 5: Thiết lập tự động khởi động VNC server khi khởi động lại máy
 echo "Bước 5: Thiết lập tự động khởi động VNC server khi khởi động lại máy..."
-(crontab -l 2>/dev/null; echo "@reboot vncserver :1 -geometry 1920x768 -localhost no") | crontab -
+(crontab -l 2>/dev/null; echo "@reboot vncserver :1 -geometry 1920x768") | crontab -
 check_status "Thiết lập crontab thất bại"
 
 # Hoàn tất
@@ -169,3 +149,4 @@ echo "Cài đặt hoàn tất!"
 echo "Truy cập NoVNC qua: http://$TUNNEL_IP:$TUNNEL_NOVNC_PORT/vnc.html"
 echo "Kiểm tra log nếu có lỗi:"
 echo "  - SSH tunnel: /var/log/ssh-tunnel.log"
+echo "  - VNC server: ~/.vnc/*.log"
