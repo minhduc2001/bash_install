@@ -8,111 +8,79 @@ check_status() {
     fi
 }
 
-# Hàm yêu cầu người dùng nhập thông tin (giữ lại cho các phần khác)
+# Hàm yêu cầu người dùng nhập thông tin
 prompt_input() {
     local prompt="$1"
     local var_name="$2"
     local hidden="$3"
     if [ "$hidden" == "hidden" ]; then
-        read -s -p "$prompt" $var_name
+        read -r -s -p "$prompt" REPLY
         echo
     else
-        read -p "$prompt" $var_name
+        read -r -p "$prompt" REPLY
     fi
+    eval "$var_name=\"$REPLY\""
 }
 
-# Yêu cầu người dùng nhập thông tin cấu hình cho tunnel server
-echo "Nhập thông tin cấu hình cho tunnel server (nhấn Enter để sử dụng giá trị mặc định nếu có):"
+# Yêu cầu thông tin từ người dùng
+echo "Nhập thông tin cấu hình cho tunnel server (nhấn Enter để sử dụng giá trị mặc định):"
 prompt_input "Tên người dùng trên tunnel server (mặc định: ubuntu): " TUNNEL_USER
 TUNNEL_USER=${TUNNEL_USER:-ubuntu}
 prompt_input "Địa chỉ IP của tunnel server: " TUNNEL_IP
 prompt_input "Cổng SSH của tunnel server (mặc định: 24700): " TUNNEL_SSH_PORT
 TUNNEL_SSH_PORT=${TUNNEL_SSH_PORT:-24700}
 prompt_input "Mật khẩu SSH của tunnel server: " TUNNEL_PASSWORD hidden
-prompt_input "Cổng NoVNC trên tunnel server (ví dụ: 7013, đảm bảo cổng này chưa được dùng): " TUNNEL_NOVNC_PORT
+prompt_input "Cổng NoVNC trên tunnel server (mặc định: 7013): " TUNNEL_NOVNC_PORT
 TUNNEL_NOVNC_PORT=${TUNNEL_NOVNC_PORT:-7013}
 
-# Đặt giá trị mặc định cố định cho các thông số local và VNC
+# Thiết lập giá trị mặc định
 LOCAL_NOVNC_PORT=6080
 LOCAL_VNC_PORT=5901
 EMAIL="user@example.com"
 VNC_PASSWORD="Vnc@2025"
 VNC_VIEWONLY_PASSWORD="Node123@"
-
-# Lấy tên người dùng hiện tại trên máy local
 LOCAL_USER=$(whoami)
 
 # Cập nhật hệ thống và cài đặt các gói cần thiết
 echo "Cập nhật hệ thống và cài đặt các gói cần thiết..."
-sudo apt-get update
-sudo apt install -y xfce4 xfce4-goodies tightvncserver autossh openssh-client sshpass netcat-openbsd xfonts-base xfonts-75dpi xfonts-100dpi xfonts-scalable
-check_status "Cài đặt các gói thất bại"
+sudo apt-get update || check_status "Cập nhật hệ thống thất bại"
+sudo apt install -y xfce4 xfce4-goodies tightvncserver autossh sshpass netcat-openbsd xfonts-base xfonts-75dpi xfonts-100dpi xfonts-scalable || check_status "Cài đặt các gói thất bại"
 
-# Bước 1: Tạo SSH key
-echo "Bước 1: Tạo cặp khóa SSH..."
-if [ -f ~/.ssh/id_rsa ]; then
-    echo "SSH key đã tồn tại tại ~/.ssh/id_rsa. Bỏ qua bước tạo key."
-else
-    ssh-keygen -t rsa -b 4096 -C "$EMAIL" -f ~/.ssh/id_rsa -N ""
-    check_status "Tạo SSH key thất bại"
-    echo "Khóa SSH đã được tạo tại ~/.ssh/id_rsa và ~/.ssh/id_rsa.pub"
+# Tạo SSH key nếu chưa có
+echo "Kiểm tra SSH key..."
+if [ ! -f ~/.ssh/id_rsa ]; then
+    ssh-keygen -t rsa -b 4096 -C "$EMAIL" -f ~/.ssh/id_rsa -N "" || check_status "Tạo SSH key thất bại"
 fi
 
-# Kiểm tra kết nối đến tunnel server trước khi sao chép khóa
-echo "Kiểm tra kết nối đến tunnel server..."
-nc -zv $TUNNEL_IP $TUNNEL_SSH_PORT 2>/dev/null
-if [ $? -ne 0 ]; then
-    echo "Lỗi: Không thể kết nối đến $TUNNEL_IP trên cổng $TUNNEL_SSH_PORT."
-    echo "Vui lòng kiểm tra firewall, security group, hoặc trạng thái server."
-    exit 1
-fi
+# Kiểm tra kết nối tunnel server
+nc -zv $TUNNEL_IP $TUNNEL_SSH_PORT 2>/dev/null || check_status "Không thể kết nối đến $TUNNEL_IP trên cổng $TUNNEL_SSH_PORT. Kiểm tra firewall và trạng thái server."
 
-# Bước 2: Sao chép khóa công khai vào tunnel server
-echo "Bước 2: Sao chép khóa công khai vào tunnel server..."
-sshpass -p "$TUNNEL_PASSWORD" ssh -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub 2> /tmp/sshpass_error.log
-check_status "Sao chép khóa công khai thất bại. Kiểm tra mật khẩu hoặc cấu hình SSH trên tunnel server. Chi tiết lỗi: $(cat /tmp/sshpass_error.log)"
+# Sao chép SSH key lên tunnel server
+echo "Sao chép khóa công khai lên tunnel server..."
+sshpass -p "$TUNNEL_PASSWORD" ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub || check_status "Sao chép khóa SSH thất bại"
 
-# Kiểm tra kết nối không cần mật khẩu
-echo "Kiểm tra kết nối SSH không cần mật khẩu..."
-ssh -o BatchMode=yes -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "echo 'Kết nối thành công'" 2>/dev/null
-check_status "Kết nối SSH không cần mật khẩu thất bại (có thể cần kiểm tra file authorized_keys trên tunnel server)"
+# Kiểm tra kết nối không mật khẩu
+ssh -o BatchMode=yes -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "echo 'Kết nối thành công'" 2>/dev/null || check_status "Kết nối SSH không mật khẩu thất bại"
 
-# Bước 3: Cấu hình VNC server
-echo "Bước 3: Cấu hình VNC server..."
-# Đảm bảo thư mục ~/.vnc/ tồn tại
-mkdir -p ~/.vnc/
-check_status "Tạo thư mục ~/.vnc/ thất bại"
+# Cấu hình VNC server
+echo "Cấu hình VNC server..."
+mkdir -p ~/.vnc || check_status "Tạo thư mục ~/.vnc thất bại"
 
-if [ -f ~/.vnc/xstartup ]; then
-    mv ~/.vnc/xstartup ~/.vnc/xstartup.bak
-    echo "Đã sao lưu file xstartup cũ thành xstartup.bak"
-fi
-
-# Tạo file xstartup mới
 cat > ~/.vnc/xstartup << 'EOF'
 #!/bin/sh
-
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
-
-startxfce4
+startxfce4 &
 EOF
+chmod +x ~/.vnc/xstartup || check_status "Tạo file xstartup thất bại"
 
-chmod +x ~/.vnc/xstartup
-check_status "Tạo file xstartup thất bại"
+echo "$VNC_PASSWORD" | vncpasswd -f > ~/.vnc/passwd
+chmod 600 ~/.vnc/passwd || check_status "Thiết lập mật khẩu VNC thất bại"
 
-# Thiết lập mật khẩu VNC
-echo "Thiết lập mật khẩu VNC với giá trị mặc định..."
-echo -e "$VNC_PASSWORD\n$VNC_PASSWORD\ny\n$VNC_VIEWONLY_PASSWORD\n$VNC_VIEWONLY_PASSWORD" | vncpasswd
-check_status "Thiết lập mật khẩu VNC thất bại"
+# Khởi động VNC server
+vncserver :1 -geometry 1920x768 || check_status "Khởi động VNC server thất bại"
 
-# Khởi động VNC server lần đầu
-echo "Khởi động VNC server lần đầu..."
-vncserver :1 -geometry 1920x768
-check_status "Khởi động VNC server thất bại. Kiểm tra log tại ~/.vnc/*.log"
-
-# Bước 4: Thiết lập tự động mở SSH tunnel khi khởi động lại máy
-echo "Bước 4: Thiết lập tự động mở SSH tunnel khi khởi động lại máy..."
+# Thiết lập tự động mở SSH tunnel
 cat > /tmp/ssh-tunnel.service << EOF
 [Unit]
 Description=Persistent SSH Tunnel
@@ -122,7 +90,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=$LOCAL_USER
-ExecStart=/usr/bin/autossh -M 0 -T -N -R $TUNNEL_NOVNC_PORT:localhost:$LOCAL_NOVNC_PORT -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP
+ExecStart=/usr/bin/autossh -M 0 -T -N -R $TUNNEL_NOVNC_PORT:localhost:$LOCAL_NOVNC_PORT -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP
 Restart=always
 RestartSec=5s
 WorkingDirectory=/home/$LOCAL_USER
@@ -136,15 +104,11 @@ EOF
 sudo mv /tmp/ssh-tunnel.service /etc/systemd/system/ssh-tunnel.service
 sudo systemctl daemon-reload
 sudo systemctl enable ssh-tunnel.service
-sudo systemctl start ssh-tunnel.service
-check_status "Thiết lập dịch vụ SSH tunnel thất bại"
+sudo systemctl start ssh-tunnel.service || check_status "Thiết lập dịch vụ SSH tunnel thất bại"
 
-# Bước 5: Thiết lập tự động khởi động VNC server khi khởi động lại máy
-echo "Bước 5: Thiết lập tự động khởi động VNC server khi khởi động lại máy..."
-(crontab -l 2>/dev/null; echo "@reboot vncserver :1 -geometry 1920x768") | crontab -
-check_status "Thiết lập crontab thất bại"
+# Thiết lập tự động khởi động VNC server
+(crontab -l 2>/dev/null; echo "@reboot vncserver :1 -geometry 1920x768") | crontab - || check_status "Thiết lập crontab thất bại"
 
-# Hoàn tất
 echo "Cài đặt hoàn tất!"
 echo "Truy cập NoVNC qua: http://$TUNNEL_IP:$TUNNEL_NOVNC_PORT/vnc.html"
 echo "Kiểm tra log nếu có lỗi:"
