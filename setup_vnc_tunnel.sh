@@ -35,8 +35,8 @@ prompt_input "Cổng NoVNC trên máy local (mặc định: 6080): " LOCAL_NOVNC
 LOCAL_NOVNC_PORT=${LOCAL_NOVNC_PORT:-6080}
 prompt_input "Cổng VNC trên máy local (mặc định: 5901): " LOCAL_VNC_PORT
 LOCAL_VNC_PORT=${LOCAL_VNC_PORT:-5901}
-prompt_input "Email cho SSH key (mặc định: user@example.com): " EMAIL
-EMAIL=${EMAIL:-user@example.com}
+prompt_input "Email cho SSH key (mặc định: sale01@nodeverse.ai): " EMAIL
+EMAIL=${EMAIL:-sale01@nodeverse.ai}
 prompt_input "Mật khẩu VNC: " VNC_PASSWORD hidden
 prompt_input "Xác nhận mật khẩu VNC: " VNC_PASSWORD_CONFIRM hidden
 if [ "$VNC_PASSWORD" != "$VNC_PASSWORD_CONFIRM" ]; then
