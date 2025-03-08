@@ -44,7 +44,7 @@ LOCAL_USER=$(whoami)
 # Cập nhật hệ thống và cài đặt các gói cần thiết
 echo "Cập nhật hệ thống và cài đặt các gói cần thiết..."
 sudo apt-get update || check_status "Cập nhật hệ thống thất bại"
-sudo apt install -y xfce4 xfce4-goodies tightvncserver autossh sshpass netcat-openbsd xfonts-base xfonts-75dpi xfonts-100dpi xfonts-scalable || check_status "Cài đặt các gói thất bại"
+sudo apt install -y xfce4 xfce4-goodies tightvncserver autossh sshpass expect netcat-openbsd xfonts-base xfonts-75dpi xfonts-100dpi xfonts-scalable || check_status "Cài đặt các gói thất bại"
 
 # Tạo SSH key nếu chưa có
 echo "Kiểm tra SSH key..."
@@ -56,8 +56,20 @@ fi
 nc -zv $TUNNEL_IP $TUNNEL_SSH_PORT 2>/dev/null || check_status "Không thể kết nối đến $TUNNEL_IP trên cổng $TUNNEL_SSH_PORT. Kiểm tra firewall và trạng thái server."
 
 # Sao chép SSH key lên tunnel server
+# echo "Sao chép khóa công khai lên tunnel server..."
+# SSHPASS='$TUNNEL_PASSWORD' sshpass -e ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub 2> /tmp/sshpass_error.log || check_status "Sao chép khóa SSH thất bại. Chi tiết lỗi: $(cat /tmp/sshpass_error.log)"
+
 echo "Sao chép khóa công khai lên tunnel server..."
-SSHPASS='$TUNNEL_PASSWORD' sshpass -e ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub 2> /tmp/sshpass_error.log || check_status "Sao chép khóa SSH thất bại. Chi tiết lỗi: $(cat /tmp/sshpass_error.log)"
+expect << EOF
+spawn ssh -o StrictHostKeyChecking=ask -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+expect {
+    "yes/no" { send "yes\r"; exp_continue }
+    "password:" { send "$TUNNEL_PASSWORD\r" }
+}
+expect eof
+EOF
+check_status "Sao chép khóa SSH thất bại"
+
 
 # Kiểm tra kết nối không mật khẩu
 ssh -o BatchMode=yes -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "echo 'Kết nối thành công'" 2>/dev/null || check_status "Kết nối SSH không mật khẩu thất bại"
