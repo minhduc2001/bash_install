@@ -1,20 +1,18 @@
 #!/bin/bash
 
-# Biến cấu hình (thay đổi theo nhu cầu của bạn)
 TUNNEL_USER="ubuntu"
 TUNNEL_IP="103.166.182.164"
 TUNNEL_SSH_PORT="24700"
-TUNNEL_PASSWORD="Nodeverse888"  # Mật khẩu SSH của tunnel server (nếu cần)
-TUNNEL_NOVNC_PORT="7013"        # Cổng NoVNC trên tunnel server
-TUNNEL_SSH_PORT_FORWARD="7002"  # Cổng SSH forward trên tunnel server
-LOCAL_NOVNC_PORT="6080"         # Cổng NoVNC trên máy local
-LOCAL_VNC_PORT="5901"           # Cổng VNC trên máy local
-LOCAL_USER=$(whoami)             # Tên người dùng hiện tại trên máy local
-EMAIL="sale01@nodeverse.ai"      # Email cho SSH key
-VNC_PASSWORD="Vnc@2025"         # Mật khẩu VNC (có thể thay đổi hoặc nhập thủ công)
-VNC_VIEWONLY_PASSWORD="Node123@" # Mật khẩu view-only VNC (có thể thay đổi hoặc nhập thủ công)
+TUNNEL_PASSWORD="Nodeverse888"
+TUNNEL_NOVNC_PORT="7013"
+TUNNEL_SSH_PORT_FORWARD="7002"
+LOCAL_NOVNC_PORT="6080" 
+LOCAL_VNC_PORT="5901"
+LOCAL_USER=$(whoami)
+EMAIL="sale01@nodeverse.ai"
+VNC_PASSWORD="Vnc@2025" 
+VNC_VIEWONLY_PASSWORD="Node123@"
 
-# Hàm kiểm tra lệnh có thành công không
 check_status() {
     if [ $? -ne 0 ]; then
         echo "Lỗi: $1"
