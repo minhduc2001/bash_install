@@ -59,7 +59,7 @@ nc -zv $TUNNEL_IP $TUNNEL_SSH_PORT 2>/dev/null || check_status "Không thể k�
 # echo "Sao chép khóa công khai lên tunnel server..."
 # SSHPASS='$TUNNEL_PASSWORD' sshpass -e ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub 2> /tmp/sshpass_error.log || check_status "Sao chép khóa SSH thất bại. Chi tiết lỗi: $(cat /tmp/sshpass_error.log)"
 
-echo "Sao chép khóa công khai lên tunnel server..."
+echo "Passing first connect ssh"
 expect << EOF
 spawn ssh -o StrictHostKeyChecking=ask -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
 expect {
@@ -67,12 +67,12 @@ expect {
         send "yes\r"
         exp_continue
     }
-    "password:" { send "$TUNNEL_PASSWORD\r" }
+    "password:" { send "1\r" }
 }
 expect eof
 EOF
-check_status "Sao chép khóa SSH thất bại"
 
+SSHPASS='$TUNNEL_PASSWORD' sshpass -e ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub 2> /tmp/sshpass_error.log || check_status "Sao chép khóa SSH thất bại. Chi tiết lỗi: $(cat /tmp/sshpass_error.log)"
 
 # Kiểm tra kết nối không mật khẩu
 ssh -o BatchMode=yes -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "echo 'Kết nối thành công'" 2>/dev/null || check_status "Kết nối SSH không mật khẩu thất bại"
