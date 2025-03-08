@@ -63,7 +63,7 @@ echo "Sao chép khóa công khai lên tunnel server..."
 expect << EOF
 spawn ssh -o StrictHostKeyChecking=ask -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
 expect {
-    "yes/no" { send "yes\r"; exp_continue }
+    "Are you sure you want to continue connecting (yes/no/[fingerprint])?" { send "yes\r"; exp_continue }
     "password:" { send "$TUNNEL_PASSWORD\r" }
 }
 expect eof
