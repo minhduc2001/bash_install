@@ -1,18 +1,6 @@
 #!/bin/bash
 
-TUNNEL_USER="ubuntu"
-TUNNEL_IP="103.166.182.164"
-TUNNEL_SSH_PORT="24700"
-TUNNEL_PASSWORD="Nodeverse888"
-TUNNEL_NOVNC_PORT="7013"
-TUNNEL_SSH_PORT_FORWARD="7002"
-LOCAL_NOVNC_PORT="6080" 
-LOCAL_VNC_PORT="5901"
-LOCAL_USER=$(whoami)
-EMAIL="sale01@nodeverse.ai"
-VNC_PASSWORD="Vnc@2025" 
-VNC_VIEWONLY_PASSWORD="Node123@"
-
+# Hàm kiểm tra lệnh có thành công không
 check_status() {
     if [ $? -ne 0 ]; then
         echo "Lỗi: $1"
@@ -20,28 +8,83 @@ check_status() {
     fi
 }
 
+# Hàm yêu cầu người dùng nhập thông tin
+prompt_input() {
+    local prompt="$1"
+    local var_name="$2"
+    local hidden="$3"
+    if [ "$hidden" == "hidden" ]; then
+        read -s -p "$prompt" $var_name
+        echo
+    else
+        read -p "$prompt" $var_name
+    fi
+}
+
+# Yêu cầu người dùng nhập thông tin cấu hình
+echo "Nhập thông tin cấu hình (nhấn Enter để sử dụng giá trị mặc định nếu có):"
+prompt_input "Tên người dùng trên tunnel server (mặc định: ubuntu): " TUNNEL_USER
+TUNNEL_USER=${TUNNEL_USER:-ubuntu}
+prompt_input "Địa chỉ IP của tunnel server: " TUNNEL_IP
+prompt_input "Cổng SSH của tunnel server (mặc định: 24700): " TUNNEL_SSH_PORT
+TUNNEL_SSH_PORT=${TUNNEL_SSH_PORT:-24700}
+prompt_input "Cổng NoVNC trên tunnel server (mặc định: 7013): " TUNNEL_NOVNC_PORT
+TUNNEL_NOVNC_PORT=${TUNNEL_NOVNC_PORT:-7013}
+prompt_input "Cổng SSH forward trên tunnel server (mặc định: 7002): " TUNNEL_SSH_PORT_FORWARD
+TUNNEL_SSH_PORT_FORWARD=${TUNNEL_SSH_PORT_FORWARD:-7002}
+prompt_input "Cổng NoVNC trên máy local (mặc định: 6080): " LOCAL_NOVNC_PORT
+LOCAL_NOVNC_PORT=${LOCAL_NOVNC_PORT:-6080}
+prompt_input "Cổng VNC trên máy local (mặc định: 5901): " LOCAL_VNC_PORT
+LOCAL_VNC_PORT=${LOCAL_VNC_PORT:-5901}
+prompt_input "Email cho SSH key (mặc định: user@example.com): " EMAIL
+EMAIL=${EMAIL:-user@example.com}
+prompt_input "Mật khẩu SSH của tunnel server: " TUNNEL_PASSWORD hidden
+prompt_input "Mật khẩu VNC: " VNC_PASSWORD hidden
+prompt_input "Xác nhận mật khẩu VNC: " VNC_PASSWORD_CONFIRM hidden
+if [ "$VNC_PASSWORD" != "$VNC_PASSWORD_CONFIRM" ]; then
+    echo "Mật khẩu VNC không khớp!"
+    exit 1
+fi
+prompt_input "Bạn có muốn thiết lập mật khẩu view-only không? (y/n): " answer
+if [ "$answer" == "y" ]; then
+    prompt_input "Mật khẩu view-only: " VNC_VIEWONLY_PASSWORD hidden
+    prompt_input "Xác nhận mật khẩu view-only: " VNC_VIEWONLY_PASSWORD_CONFIRM hidden
+    if [ "$VNC_VIEWONLY_PASSWORD" != "$VNC_VIEWONLY_PASSWORD_CONFIRM" ]; then
+        echo "Mật khẩu view-only không khớp!"
+        exit 1
+    fi
+else
+    VNC_VIEWONLY_PASSWORD=""
+fi
+
+# Lấy tên người dùng hiện tại trên máy local
+LOCAL_USER=$(whoami)
+
 # Cập nhật hệ thống và cài đặt các gói cần thiết
 echo "Cập nhật hệ thống và cài đặt các gói cần thiết..."
 sudo apt-get update
-sudo apt install -y xfce4 xfce4-goodies novnc websockify python3-numpy build-essential net-tools curl git software-properties-common tightvncserver tigervnc-standalone-server tigervnc-xorg-extension tigervnc-viewer dbus-x11 gnome-session-flashback metacity autossh openssh-client
+sudo apt install -y xfce4 xfce4-goodies novnc websockify python3-numpy build-essential net-tools curl git software-properties-common tightvncserver tigervnc-standalone-server tigervnc-xorg-extension tigervnc-viewer dbus-x11 gnome-session-flashback metacity autossh openssh-client sshpass
 check_status "Cài đặt các gói thất bại"
 
 # Bước 1: Tạo SSH key
 echo "Tạo cặp khóa SSH..."
-ssh-keygen -t rsa -b 4096 -C "$EMAIL" -f ~/.ssh/id_rsa -N ""
-check_status "Tạo SSH key thất bại"
-echo "Khóa SSH đã được tạo tại ~/.ssh/id_rsa và ~/.ssh/id_rsa.pub"
+if [ -f ~/.ssh/id_rsa ]; then
+    echo "SSH key đã tồn tại tại ~/.ssh/id_rsa. Bỏ qua bước tạo key."
+else
+    ssh-keygen -t rsa -b 4096 -C "$EMAIL" -f ~/.ssh/id_rsa -N ""
+    check_status "Tạo SSH key thất bại"
+    echo "Khóa SSH đã được tạo tại ~/.ssh/id_rsa và ~/.ssh/id_rsa.pub"
+fi
 
-# Bước 2: Thêm khóa công khai vào tunnel server
+# Bước 2: Sao chép khóa công khai vào tunnel server
 echo "Sao chép khóa công khai vào tunnel server..."
-cat ~/.ssh/id_rsa.pub | ssh -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
-check_status "Sao chép khóa công khai thất bại (có thể cần nhập mật khẩu: $TUNNEL_PASSWORD)"
-echo "Đã thêm khóa công khai vào tunnel server"
+sshpass -p "$TUNNEL_PASSWORD" ssh -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub
+check_status "Sao chép khóa công khai thất bại (có thể mật khẩu không đúng hoặc server không phản hồi)"
 
 # Kiểm tra kết nối không cần mật khẩu
 echo "Kiểm tra kết nối SSH không cần mật khẩu..."
-ssh -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "echo 'Kết nối thành công'"
-check_status "Kết nối SSH không cần mật khẩu thất bại"
+ssh -o BatchMode=yes -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "echo 'Kết nối thành công'" 2>/dev/null
+check_status "Kết nối SSH không cần mật khẩu thất bại (có thể cần kiểm tra file authorized_keys trên tunnel server)"
 
 # Bước 3: Cấu hình VNC server
 echo "Cấu hình VNC server..."
@@ -65,7 +108,11 @@ check_status "Tạo file xstartup thất bại"
 
 # Thiết lập mật khẩu VNC
 echo "Thiết lập mật khẩu VNC..."
-echo -e "$VNC_PASSWORD\n$VNC_PASSWORD\ny\n$VNC_VIEWONLY_PASSWORD\n$VNC_VIEWONLY_PASSWORD" | vncpasswd
+if [ -n "$VNC_VIEWONLY_PASSWORD" ]; then
+    echo -e "$VNC_PASSWORD\n$VNC_PASSWORD\ny\n$VNC_VIEWONLY_PASSWORD\n$VNC_VIEWONLY_PASSWORD" | vncpasswd
+else
+    echo -e "$VNC_PASSWORD\n$VNC_PASSWORD\nn" | vncpasswd
+fi
 check_status "Thiết lập mật khẩu VNC thất bại"
 
 # Khởi động VNC server lần đầu
