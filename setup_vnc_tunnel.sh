@@ -56,21 +56,21 @@ fi
 nc -zv $TUNNEL_IP $TUNNEL_SSH_PORT 2>/dev/null || check_status "Không thể kết nối đến $TUNNEL_IP trên cổng $TUNNEL_SSH_PORT. Kiểm tra firewall và trạng thái server."
 
 # Sao chép SSH key lên tunnel server
-# echo "Sao chép khóa công khai lên tunnel server..."
+echo "Sao chép khóa công khai lên tunnel server..."
 # SSHPASS='$TUNNEL_PASSWORD' sshpass -e ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub 2> /tmp/sshpass_error.log || check_status "Sao chép khóa SSH thất bại. Chi tiết lỗi: $(cat /tmp/sshpass_error.log)"
 
-echo "Passing first connect ssh"
-expect << EOF
-spawn ssh -o StrictHostKeyChecking=ask -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
-expect {
-    "Are you sure you want to continue connecting" {
-        send "yes\r"
-        exp_continue
-    }
-    "password:" { send "1\r" }
-}
-expect eof
-EOF
+# echo "Passing first connect ssh"
+# expect << EOF
+# spawn ssh -o StrictHostKeyChecking=ask -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+# expect {
+#     "Are you sure you want to continue connecting" {
+#         send "yes\r"
+#         exp_continue
+#     }
+#     "password:" { send "1\r" }
+# }
+# expect eof
+# EOF
 
 SSHPASS='$TUNNEL_PASSWORD' sshpass -e ssh -o StrictHostKeyChecking=no -p $TUNNEL_SSH_PORT $TUNNEL_USER@$TUNNEL_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_rsa.pub 2> /tmp/sshpass_error.log || check_status "Sao chép khóa SSH thất bại. Chi tiết lỗi: $(cat /tmp/sshpass_error.log)"
 
